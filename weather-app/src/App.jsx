@@ -1,39 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // ✅ combine import
 import SearchBar from "./components/SearchBar";
 import WeatherCard from "./components/WeatherCard";
 import Forecast from "./components/Forecast";
-import { getWeather, getForecast } from "./services/weatherService";
+import { getWeather, getForecast, getForecastByCoords } from "./services/weatherService";
 
 function App() {
   const [city, setCity] = useState("");
   const [weather, setWeather] = useState(null);
-  const [forecast, setForecast] = useState([]); // ✅ added
+  const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // const handleSearch = async () => {
-  //   if (!city.trim()) {
-  //     setError("Please enter a city name");
-  //     return;
-  //   }
+  // 👇 YOUR FUNCTION (must be above useEffect)
+  const getLocationWeather = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation not supported");
+      return;
+    }
 
-  //   setLoading(true);
-  //   setError("");
-  //   setWeather(null);
-  //   setForecast([]); // ✅ reset forecast
+    setLoading(true);
+    setError("");
 
-  //   try {
-  //     const weatherData = await getWeather(city);
-  //     const forecastData = await getForecast(city);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
 
-  //     setWeather(weatherData);
-  //     setForecast(forecastData.list); // ✅ store forecast
-  //   } catch (err) {
-  //     setError(err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+        try {
+      const response = await fetch(
+  `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=85769b120cd7e6b47719cc93d08a5308&units=metric`
+);
+
+          const data = await response.json();
+          setWeather(data);
+
+          getForecastByCoords(latitude, longitude)
+            .then((forecastData) => {
+              setForecast(forecastData.list);
+            })
+            .catch(() => console.log("Forecast failed"));
+
+        } catch {
+          setError("Failed to fetch location weather");
+        } finally {
+          setLoading(false);
+        }
+      },
+      () => {
+        setError("Location access denied");
+        setLoading(false);
+      }
+    );
+  };
+
+  // 👇 ADD HERE (inside function, before return)
+  useEffect(() => {
+    getLocationWeather();
+  }, []);
 
   const handleSearch = async () => {
   if (!city.trim()) {
@@ -47,11 +69,11 @@ function App() {
   setForecast([]);
 
   try {
-    // ✅ Load weather FIRST (fast)
+    // ✅ show weather first (fast)
     const weatherData = await getWeather(city);
     setWeather(weatherData);
 
-    // ✅ Load forecast in background (no wait)
+    // ✅ load forecast in background
     getForecast(city)
       .then((forecastData) => {
         setForecast(forecastData.list);
@@ -67,25 +89,8 @@ function App() {
   }
 };
 
-  const weatherType = weather?.weather?.[0]?.main;
-
-  const getBackground = () => {
-    switch (weatherType) {
-      case "Clear":
-        return "linear-gradient(to right, #56ccf2, #2f80ed)";
-      case "Rain":
-        return "linear-gradient(to right, #373b44, #4286f4)";
-      case "Clouds":
-        return "linear-gradient(to right, #bdc3c7, #2c3e50)";
-      case "Smoke":
-        return "linear-gradient(to right, #757f9a, #d7dde8)";
-      default:
-        return "linear-gradient(to right, #0f172a, #1e3a8a)";
-    }
-  };
-
   return (
-    <div className="app" style={{ background: getBackground() }}>
+    <div className="app">
       <h1>🌦️ Weather App</h1>
 
       <SearchBar
@@ -94,13 +99,14 @@ function App() {
         handleSearch={handleSearch}
       />
 
+      <button onClick={getLocationWeather}>
+        📍 Use My Location
+      </button>
+
       {loading && <div className="loader"></div>}
       {error && <p className="error">{error}</p>}
 
       <WeatherCard weather={weather} />
-
-      {/* ✅ Forecast added */}
-      {forecast.length === 0 && weather && <p>Loading forecast...</p>}
       <Forecast data={forecast} />
     </div>
   );

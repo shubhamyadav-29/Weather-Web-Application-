@@ -25,3 +25,15 @@ export const getForecast = async (city) => {
 
   return response.json();
 };
+
+export const getForecastByCoords = async (lat, lon) => {
+  const response = await fetch(
+    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=YOUR_API_KEY&units=metric`
+  );
+
+  if (!response.ok) {
+    throw new Error("Forecast not found");
+  }
+
+  return response.json();
+};
