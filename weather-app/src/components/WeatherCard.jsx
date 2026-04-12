@@ -1,5 +1,5 @@
-function WeatherCard({ weather }) {
-  if (!weather) return null;
+function WeatherCard({ weather, toggleFavorite, favorites = [] }) {
+  if (!weather || !weather.weather) return null;
 
   const icon = weather.weather[0].icon;
   const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
@@ -9,6 +9,10 @@ function WeatherCard({ weather }) {
       <h2>
         {weather.name}, {weather.sys.country}
       </h2>
+
+      <button onClick={toggleFavorite} className="fav-btn">
+        {favorites.includes(weather.name) ? "❤️" : "🤍"}
+      </button>
 
       <img src={iconUrl} alt="weather icon" />
 
